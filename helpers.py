@@ -1,22 +1,22 @@
 import os
+import urllib.request
 from typing import List
 
-import urllib.request
 import cv2
-
 import numpy as np
+import requests
 import supervision as sv
 import torch
-
 from groundingdino.util.inference import Model
 from segment_anything import SamPredictor, sam_model_registry
+from tqdm import tqdm
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if not torch.cuda.is_available():
     print("WARNING: CUDA not available. GroundingDINO will run very slowly.")
 
-def image_resize(img, size=(480, 480)):
+def image_resize(img, size=(512, 512)):
 
     h, w = img.shape[:2]
     c = img.shape[2] if len(img.shape)>2 else 1
@@ -191,6 +191,20 @@ def combine_detections(detections_list, overwrite_class_ids):
         tracker_id=tracker_id,
     )
 
+def download(url: str, fname: str):
+    resp = requests.get(url, stream=True)
+    total = int(resp.headers.get('content-length', 0))
+    # Can also replace 'file' with a io.BytesIO object
+    with open(fname, 'wb') as file, tqdm(
+        desc=fname,
+        total=total,
+        unit='iB',
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
+        for data in resp.iter_content(chunk_size=1024):
+            size = file.write(data)
+            bar.update(size)
 
 def load_grounding_dino():
     CACHE_DIR = os.path.expanduser("./.cache")
@@ -222,12 +236,12 @@ def load_grounding_dino():
         if not os.path.exists(GROUNDING_DINO_CHECKPOINT_PATH):
             # url = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth"
             url = "https://github.com/longzw1997/Open-GroundingDino/releases/download/v0.1.0/gdinot-1.8m-odvg.pth"
-            urllib.request.urlretrieve(url, GROUNDING_DINO_CHECKPOINT_PATH)
+            download(url, GROUNDING_DINO_CHECKPOINT_PATH)
 
         if not os.path.exists(GROUNDING_DINO_CONFIG_PATH):
             url = "https://raw.githubusercontent.com/longzw1997/Open-GroundingDino/refs/heads/main/config/cfg_odvg.py"
             # url = "https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/refs/heads/main/groundingdino/config/GroundingDINO_SwinB_cfg.py"
-            urllib.request.urlretrieve(url, GROUNDING_DINO_CONFIG_PATH)
+            download(url, GROUNDING_DINO_CONFIG_PATH)
 
         grounding_dino_model = Model(
             model_config_path=GROUNDING_DINO_CONFIG_PATH,
@@ -253,7 +267,7 @@ def load_SAM():
     # Download the file if it doesn't exist
     if not os.path.isfile(SAM_CHECKPOINT_PATH):
         print("downloading SAM model weights")
-        urllib.request.urlretrieve(url, SAM_CHECKPOINT_PATH)
+        download(url, SAM_CHECKPOINT_PATH)
 
     SAM_ENCODER_VERSION = "vit_h"
 

@@ -142,7 +142,7 @@ def crop(args):
         cv2.imwrite(args.prv, res)
 
 def ocr(args):
-    ocr = PaddleOCR(use_angle_cls=True, lang="ch")
+    ocr = PaddleOCR(use_angle_cls=True, lang="ch", show_log=False)
     ontology = CaptionOntology({args.prt:args.cls})
     detection = Detection(ontology, args.bth, args.tth)
 
@@ -189,7 +189,11 @@ def ocr(args):
         cropped = cv2.getRectSubPix(rotated, 
             (int(rotated_rect[1][0]), int(rotated_rect[1][1])), 
             rotated_rect[0])
-
+        
+        # if cropped width is larger than height, rotate the image 90 degree
+        if args.rot and cropped.shape[1] > cropped.shape[0]:
+            cropped = cv2.rotate(cropped, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        
         ocr_result = ocr.ocr(cropped, cls=True)[0]
         boxes = [line[0] for line in ocr_result]
         texts = [line[1][0] for line in ocr_result]
@@ -200,9 +204,15 @@ def ocr(args):
 
         # put text on the image
         for i in range(box_num):
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            org = (50, 50)
+            fontScale = 1
+            thickness = 2
+            cropped = cv2.putText(cropped, texts[i], org, font, 
+                   fontScale, (0, 0, 200), thickness, cv2.LINE_AA)
             print(texts[i])
 
-        resized = image_resize(cropped)
+        resized = image_resize(cropped, (1024, 1024))
         cropped_list.append(resized)
 
     if args.prv is True:
@@ -293,6 +303,7 @@ def main():
 
     parser_ocr.add_argument("-bth", help="box threshold", type=float, default=0.35)
     parser_ocr.add_argument("-tth", help="text threshold", type=float, default=0.25)
+    parser_ocr.add_argument("-rot", help="rotate the cropped image for a better result", default=False, type=bool, action=argparse.BooleanOptionalAction)
 
     parser_ocr.add_argument("-flt", 
                             help=("filter out a box in another box, 0 = no filter, 1 = keep outter box, 2 = keep inner box"), 
