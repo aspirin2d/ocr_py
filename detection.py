@@ -64,12 +64,6 @@ class Detection():
             detections_list, overwrite_class_ids=range(len(detections_list))
         )
 
-        # only keep the detection with smallest area
-        # NOTE: this is just for finding label on the object, it will significantly reduce the SAM prediction time
-        # if len(detections.xyxy) > 1:
-        #     detections = smallest_detection(detections)
-            # detections = most_confident_detection(detections)
-
         # SAM Predictions
         xyxy = detections.xyxy
 
@@ -83,6 +77,4 @@ class Detection():
             result_masks.append(masks[index])
 
         detections.mask = np.array(result_masks)
-
-        # separate in supervision to combine detections and override class_ids
         return detections

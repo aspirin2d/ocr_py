@@ -1,10 +1,13 @@
 import os
+from typing import List
+
 import urllib.request
 import cv2
 
 import numpy as np
 import supervision as sv
 import torch
+
 from groundingdino.util.inference import Model
 from segment_anything import SamPredictor, sam_model_registry
 
@@ -13,11 +16,58 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if not torch.cuda.is_available():
     print("WARNING: CUDA not available. GroundingDINO will run very slowly.")
 
-def crop_obb(img, rect):
+def image_resize(img, size=(480, 480)):
+
+    h, w = img.shape[:2]
+    c = img.shape[2] if len(img.shape)>2 else 1
+
+    if h == w: 
+        return cv2.resize(img, size, cv2.INTER_AREA)
+
+    dif = h if h > w else w
+
+    interpolation = cv2.INTER_AREA if dif > (size[0]+size[1])//2 else cv2.INTER_CUBIC
+
+    x_pos = (dif - w)//2
+    y_pos = (dif - h)//2
+
+    if len(img.shape) == 2:
+        mask = np.zeros((dif, dif), dtype=img.dtype)
+        mask[y_pos:y_pos+h, x_pos:x_pos+w] = img[:h, :w]
+    else:
+        mask = np.zeros((dif, dif, c), dtype=img.dtype)
+        mask[y_pos:y_pos+h, x_pos:x_pos+w, :] = img[:h, :w, :]
+
+    return cv2.resize(mask, size, interpolation)
+
+def mask_to_polygon(mask: np.ndarray) -> np.ndarray:
+    """
+    Converts a binary mask to ONE polygon.
+
+    Parameters:
+        mask (np.ndarray): A binary mask represented as a 2D NumPy array of
+            shape `(H, W)`, where H and W are the height and width of
+            the mask, respectively.
+
+    Returns:
+        List[np.ndarray]: A list of polygons, where each polygon is represented by a
+            NumPy array of shape `(N, 2)`, containing the `x`, `y` coordinates
+            of the points. Polygons with fewer points than `MIN_POLYGON_POINT_COUNT = 3`
+            are excluded from the output.
+    """
+
+    contours, _ = cv2.findContours(
+        mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    return cv2.convexHull(np.vstack(contours))
+
+
+def crop_obb(img, obb):
     # get the parameter of the small rectangle
-    center = rect[0]
-    size = rect[1]
-    angle = rect[2]
+    center = obb[0]
+    size = obb[1]
+    angle = obb[2]
     center, size = tuple(map(int, center)), tuple(map(int, size))
 
     # get row and col num in img
@@ -29,6 +79,34 @@ def crop_obb(img, rect):
 
     img_crop = cv2.getRectSubPix(img_rot, size, center)
     return img_crop
+
+def overlay(image, mask, color, alpha, resize=None):
+    """Combines image and its segmentation mask into a single image.
+    Params:
+        image: Training image. np.ndarray,
+        mask: Segmentation mask. np.ndarray,
+        color: Color for segmentation mask rendering.  tuple[int, int, int] = (255, 0, 0)
+        alpha: Segmentation mask's transparency. float = 0.5,
+        resize: If provided, both image and its mask are resized before blending them together.
+        tuple[int, int] = (1024, 1024))
+
+    Returns:
+        image_combined: The combined image. np.ndarray
+
+    """
+    color = color[::-1]
+    colored_mask = np.expand_dims(mask, 0).repeat(3, axis=0)
+    colored_mask = np.moveaxis(colored_mask, 0, -1)
+    masked = np.ma.MaskedArray(image, mask=colored_mask, fill_value=color)
+    image_overlay = masked.filled()
+
+    if resize is not None:
+        image = cv2.resize(image.transpose(1, 2, 0), resize)
+        image_overlay = cv2.resize(image_overlay.transpose(1, 2, 0), resize)
+
+    image_combined = cv2.addWeighted(image, 1 - alpha, image_overlay, alpha, 0)
+
+    return image_combined
 
 # find the most confident detection in detections
 def most_confident_detection(detections):
@@ -183,5 +261,4 @@ def load_SAM():
         device=DEVICE
     )
     sam_predictor = SamPredictor(sam)
-
     return sam_predictor

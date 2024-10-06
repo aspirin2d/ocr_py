@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 
 .cache
+.DS_Store
+assets/
