@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import cv2
 import numpy as np
@@ -8,6 +9,7 @@ from detection import Detection
 from helpers import image_resize, mask_to_polygon, overlay
 from ontology import CaptionOntology
 
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 def detect(args):
     ontology = CaptionOntology({args.prt:args.cls})
