@@ -44,14 +44,14 @@ def detect(args):
         if args.dbb:
             # draw bounding box, default is false
             box = [int(i) for i in box]
-            cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), (0, 200, 0), 2)
+            cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), (0, 200, 0), 3)
 
         if args.dmk:
             # draw segments mask, default is false
             image = overlay(image, mask, (200, 0, 0), 0.3)
     
         if args.dbd:
-            # draw segments border
+            # draw segments border, default is false
             polygon =  mask_to_polygon(mask=mask)
             cv2.polylines(image, [polygon], True, (0, 200, 0), 3)
         
@@ -64,6 +64,7 @@ def detect(args):
 
     if args.prv is True:
         # preview the detection result, default is true
+        image = image_resize(image, (768, 768))
         cv2.imshow('result', image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()

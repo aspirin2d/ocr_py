@@ -158,4 +158,3 @@ dependencies:
       - transformers==4.45.1
       - yapf==0.40.2
       - zipp==3.20.2
-prefix: /home/aspirin2d/miniconda3/envs/grounded
