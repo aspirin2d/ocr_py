@@ -303,7 +303,7 @@ def main():
 
     parser_ocr.add_argument("-bth", help="box threshold", type=float, default=0.35)
     parser_ocr.add_argument("-tth", help="text threshold", type=float, default=0.25)
-    parser_ocr.add_argument("-rot", help="rotate the cropped image for a better result", default=False, type=bool, action=argparse.BooleanOptionalAction)
+    parser_ocr.add_argument("-rot90", help="rotate the cropped image 90 degree for a better result", default=False, type=bool, action=argparse.BooleanOptionalAction)
 
     parser_ocr.add_argument("-flt", 
                             help=("filter out a box in another box, 0 = no filter, 1 = keep outter box, 2 = keep inner box"), 
