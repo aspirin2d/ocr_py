@@ -1,7 +1,7 @@
 # Grounded
 
 ## 安装WSL系统（可选）
-在[这里](https://learn.microsoft.com/en-us/windows/wsl/install)按照说明进行安装。PS. 因为有些依赖在windows上还存在冲突，最好是在linux系统上进行开发。
+在[这里](https://learn.microsoft.com/en-us/windows/wsl/install)按照说明进行安装。PS. 因为有些依赖可能在windows上还存在冲突，最好是在linux系统上进行开发。
 
 ## 安装miniconda3和python
 1. 在[这里](https://docs.anaconda.com/miniconda/miniconda-install/)按照说明进行安装。
